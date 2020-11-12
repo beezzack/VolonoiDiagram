@@ -437,23 +437,30 @@ def intersection(L1, L2):
     if D != 0:
         x = Dx / D
         y = Dy / D
-        return x, y
+        return [x, y]
     else:
         return False
 
 
 def insidetheline(startpoint, endpoint, param):
     if startpoint[0] == endpoint[0]:
-        if startpoint[0] - param[0] < 0.001:
-            return True
-        else:
+        if startpoint[0] - param[0] > 0.001:
             return False
+        else:
+            if min(startpoint[1], endpoint[1]) <= param[1] <= max(startpoint[1], endpoint[1]):
+                return True
+            else:
+                return False
 
     if startpoint[1] == endpoint[1]:
-        if startpoint[1] - param[1] < 0.001:
-            return True
-        else:
+        if startpoint[1] - param[1] > 0.001:
             return False
+        else:
+            if min(startpoint[0], endpoint[0]) <= param[0] <= max(startpoint[0], endpoint[0]):
+                return True
+            else:
+                return False
+
 
     if min(startpoint[0], endpoint[0]) <= param[0] <= max(startpoint[0], endpoint[0]) and min(startpoint[1],
                                                                                               endpoint[1]) <= param[
