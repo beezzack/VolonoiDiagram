@@ -171,6 +171,7 @@ def getMinpoint(S):
 
     return resiltpoint
 
+
 def directionOfPoint(A, B, P):
     global RIGHT, LEFT, ZERO
 
@@ -294,9 +295,6 @@ def getBS(sg):
     return BS
 
 
-
-
-
 def unionhp_Tri(sg, hp, sgBS, Sl, Sr):
     if not hp:
         hp.append(sgBS)
@@ -412,11 +410,7 @@ def unionhp(sg, hp, sgBS):
         R = intersection(L1, L2)
 
         hp[lastpointindex][1] = [R[0], R[1]]
-        if insidetheline(sgBS[0], R, mid):
-            hp.append([[R[0], R[1]], sgBS[0]])
-        else:
-            hp.append([[R[0], R[1]], sgBS[1]])
-
+        hp.append([[R[0], R[1]], sgBS[1]])
 
     return hp
 
@@ -439,7 +433,8 @@ def intersection(L1, L2):
         y = Dy / D
         return [x, y]
     else:
-        return False
+        print(str(L1[0]) + "," + str(L1[1]) + " and " + str(L2[0]) + "," + str(L2[1]) + " no R.")
+        return [-1,-1]
 
 
 def insidetheline(startpoint, endpoint, param):
@@ -503,7 +498,7 @@ def discardVD(hp, VD, direction):
                 if directionOfPoint(startpoint, endpoint, hppoint) == ZERO and insidetheline(startpoint, endpoint,
                                                                                              hppoint):
                     if direction == LEFT:
-                        if directionOfPoint(hpset[0], hpset[hpsize-1], startpoint) == LEFT:
+                        if directionOfPoint(hpset[0], hpset[hpsize - 1], startpoint) == LEFT:
                             VD.xVertex[start] = hppoint[0]
                             VD.yVertex[start] = hppoint[1]
                             VD.ccwPredecessor[i] = 0
@@ -526,7 +521,6 @@ def discardVD(hp, VD, direction):
                             VD.cwSuccessor[i] = 0
 
     return VD
-
 
 
 def reconstruct(hp, SlVD, SrVD, sgpolygen):
@@ -578,11 +572,10 @@ def reconstruct(hp, SlVD, SrVD, sgpolygen):
         SlVD.ccwSuccessor.append(SrVD.ccwSuccessor[i] + SlVDedge)
 
     for i in range(hpsize):
-        rightindex = findpolygonindex(sgpolygen[i][0], SlVD)
-        leftindex = findpolygonindex(sgpolygen[i][1], SlVD)
-
-        SlVD.rightPloygon.append(rightindex)
+        leftindex = findpolygonindex(sgpolygen[i][0], SlVD)
+        rightindex = findpolygonindex(sgpolygen[i][1], SlVD)
         SlVD.leftPloygon.append(leftindex)
+        SlVD.rightPloygon.append(rightindex)
 
         if i == 0:
             SlVD.xVertex.append(hp[i][0][0])
@@ -675,18 +668,29 @@ def merageVD(Sl, Sr, SlVD, SrVD):
     # Input: list, list, VD, VD
     # Output: VD
     # step 1:
+    # 回傳座標值
     SlHull = getHull(SlVD)
     SrHull = getHull(SrVD)
     # step 2
     hightangent, lowtangent = getTangent(SlHull, SrHull)
-
     # step 3
-    x = hightangent[0]
-    y = hightangent[1]
-    sg = [x, y]
+    SlHightangent = hightangent[0]
+    SrHightangent = hightangent[1]
+    SlLowtangent = lowtangent[0]
+    Srlowtangent = lowtangent[1]
+    SlZindex = SlHull.index(SlHightangent)
+    SrZindex = SrHull.index(SrHightangent)
+    Slnextindex = SlZindex
+    Srnextindex = SrZindex
+    lowtangentindex = [SlHull.index(SlLowtangent), SrHull.index(Srlowtangent)]
+    sg = [SlHightangent, SrHightangent]
+    sgpolygen = []
     hp = []
-    segmentpolygon = [[x, y]]
+    segmentpolygon = [[SlHightangent, SrHightangent]]
     while 1:
+        sgpolygen.append(sg)
+        lR = [-1, -1]
+        rR = [-1, -1]
         sgBS = getBS(sg)
         pointlen = len(Sl) + len(Sr)
         if pointlen == 2:
@@ -700,47 +704,37 @@ def merageVD(Sl, Sr, SlVD, SrVD):
             break
 
         # step 4
-        SrZindex = SrHull.index(y) + 1
-        SlZindex = SlHull.index(x) - 1
-        Z = []
+        # Z是下一個可能的convex hull point
         # 1:1
+        if SlZindex != lowtangentindex[0]:
+            Slnextindex = (SlZindex - 1) % len(SlHull)
+        if SrZindex != lowtangentindex[1]:
+            Srnextindex = (SrZindex + 1) % len(SrHull)
         if len(Sl) == 1 and len(Sr) == 1:
             break
-        elif len(Sl) == 1 and len(Sr) == 2:
-            segmentpolygon.append([sg[1], SrHull[SrZindex % len(SrHull)]])
-            sg = [sg[0], SrHull[SrZindex % len(SrHull)]]
-        elif len(Sl) == 2 and len(Sr) == 1:
-            segmentpolygon.append([sg[0], SlHull[SlZindex % len(SlHull)]])
-            sg = [SlHull[SlZindex % len(SlHull)], sg[1]]
         else:
-            if SrHull[SrZindex % len(SrHull)] != y:
-                Z.append(SrHull[SrZindex % len(SrHull)])
-            if SlHull[SlZindex % len(SlHull)] != x:
-                Z.append(SlHull[SlZindex % len(SlHull)])
-            Max = [-99999, -99999]
-            MaxP = 0
-            thePZ = 0
-            for Pz in Z:
-                for Psg in sg:
-                    R = intersection(line(sgBS[0], sgBS[1]), line(Psg, Pz))
-                    if not R:
-                        print("平行")
-                        continue
-                    elif R[1] > Max[1]:
-                        Max = R
-                        MaxP = Psg
-                        thePZ = Pz
-            if Max == [-99999, -99999]:
-                print("全 平 行")
-                break
-            if MaxP == sg[1]:
-                segmentpolygon.append([sg[1], thePZ])
-                sg = [sg[0], thePZ]
+            if SrHull[Srnextindex] != sg[1]:
+                newBS = getBS([sg[1], SrHull[Srnextindex]])
+                rR = intersection(line(sgBS[0], sgBS[1]), line(newBS[0], newBS[1]))
+            if SlHull[Slnextindex] != sg[0]:
+                newBS = getBS([sg[0], SlHull[Slnextindex]])
+                lR = intersection(line(sgBS[0], sgBS[1]), line(newBS[0], newBS[1]))
+            # 只有一個焦點
+            if lR == [-1, -1] and rR != lR:
+                sg = [sg[0], SrHull[Srnextindex]]
+                SrZindex = Srnextindex
+            elif rR == [-1, -1] and lR != rR:
+                sg = [SlHull[Slnextindex], sg[1]]
+                SlZindex = Slnextindex
             else:
-                segmentpolygon.append([sg[0], thePZ])
-                sg = [thePZ, sg[1]]
+                if lR[1] < rR[1]:
+                    sg = [sg[0], SrHull[Srnextindex]]
+                    SrZindex = Srnextindex
+                else:
+                    sg = [SlHull[Slnextindex], sg[1]]
+                    SlZindex = Slnextindex
     # step 5
-    resultVD = reconstruct(hp, SlVD, SrVD, segmentpolygon)
+    resultVD = reconstruct(hp, SlVD, SrVD, sgpolygen)
     return resultVD
 
 
@@ -751,7 +745,7 @@ def getVolonoi(inputPoints):
     Sr = []
     if len(inputPoints) == 1:
         return Vp(inputPoints)
-    median = np.mean(inputPoints, axis=0)
+    median = np.median(inputPoints, axis=0)
     # print(median)
     for point in inputPoints:
         if point[0] <= median[0]:
@@ -778,14 +772,13 @@ def volonoialgorithm(pointlist):
     cleanlist = []
     arr = [[200, 200], [200, 300], [200, 400]]
     # pointlist 處理
-    pointset = set(map(tuple,pointlist))
+    pointset = set(map(tuple, pointlist))
     for s in pointset:
         newlist = [s[0], s[1]]
         cleanlist.append(newlist)
     pointlist = cleanlist
     pointlist = sorted(pointlist, key=lambda k: [k[0], k[1]])
 
-    
     # testdirection()
     edges = []
     result = getVolonoi(pointlist)
@@ -799,7 +792,8 @@ def volonoialgorithm(pointlist):
 
     edges = sorted(edges, key=lambda edge: [edge[0][0], edge[0][1], edge[1][0], edge[1][1]])
     for i in range(result.getedgesize()):
-        print("E: (" + str(edges[i][0][0]) + ", " + str(edges[i][0][1]) + "), (" + str(edges[i][1][0]) + ", " + str(edges[i][1][1]) + ")")
+        print("E: (" + str(edges[i][0][0]) + ", " + str(edges[i][0][1]) + "), (" + str(edges[i][1][0]) + ", " + str(
+            edges[i][1][1]) + ")")
     return pointlist, edges
 
 
