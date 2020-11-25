@@ -2,11 +2,7 @@
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-import math
-
 import numpy as np
-import GUImainframe as GUI
-
 screensize = 800
 
 # Constant integers for directions
@@ -18,8 +14,6 @@ ZERO = 0
 WIDE_ANGLE = 1
 ACUTE_ANGLE = -1
 RIGHT_ANGLE = 0
-
-
 class Vp:
     def __init__(self, InputP):
         # polygon = inPoint+1, Vertex = 2*inPoint - 2, Edge = 3*inPoint - 3
@@ -73,6 +67,7 @@ class Vp:
             if point[0] == self.xPolygon[i] and point[1] == self.yPolygon[i]:
                 return i
         return False
+
 
 
 def getEdgePolygon(theVp, vertexNum):
@@ -210,18 +205,25 @@ def getTangent(SlHull, SrHull):
     l = 0
     r = 0
 
-    def checktangent(T, index, Hull):
-        theTX = T[0]
-        theTY = T[1]
-        size = len(Hull)
-        P1 = Hull[(index + 1) % size]
-        P2 = Hull[(index - 1) % size]
-        directionP1 = directionOfPoint(theTX, theTY, P1)
-        directionP2 = directionOfPoint(theTX, theTY, P2)
-        if (directionP1 == LEFT or directionP1 == ZERO) and (directionP2 == LEFT or directionP2 == ZERO):
-            return True
-        else:
-            return False
+    def cross_product(p1, p2):
+        return p1[0] * p2[1] - p2[0] * p1[1]
+
+    def direction(p1, p2, p3):
+        vectorp1p3 = [p3[0] - p1[0], p3[1] - p1[1]]
+        vectorp2p3 = [p3[0] - p2[0], p3[1] - p2[1]]
+        return cross_product(vectorp1p3, vectorp2p3)
+
+    # checks if p3 makes left turn at p2
+    def left(p1, p2, p3):
+        return direction(p1, p2, p3) < 0
+
+    # checks if p3 makes right turn at p2
+    def right(p1, p2, p3):
+        return direction(p1, p2, p3) > 0
+
+    # checks if p1, p2 and p3 are collinear
+    def collinear(p1, p2, p3):
+        return direction(p1, p2, p3) == 0
 
     for point in SlHull:
         if point[0] > Leftpoint[0]:
@@ -243,25 +245,35 @@ def getTangent(SlHull, SrHull):
 
     lpointer = l
     rpointer = r
-    # low tangent
-    T = [Leftpoint, Rightpoint]  # L->R
-    while not (checktangent(T, lpointer, SlHull) and checktangent(T, rpointer, SrHull)):
-        while not checktangent(T, lpointer, SlHull):
-            lpointer = (lpointer - 1) % len(SlHull)
-        while not checktangent(T, rpointer, SrHull):
+    prevlpointer = None
+    prevrpointer = None
+    while True:
+        prevlpointer = lpointer
+        prevrpointer = rpointer
+        while left(SlHull[lpointer], SrHull[rpointer], SrHull[(rpointer + 1) % len(SrHull)]):
             rpointer = (rpointer + 1) % len(SrHull)
-    Lowtengent = [SlHull[lpointer], SrHull[rpointer]]
-    lpointer = l
-    rpointer = r
-    # high tangent
-    T = [Rightpoint, Leftpoint]  # R->L
-    while not (checktangent(T, lpointer, SlHull) and checktangent(T, rpointer, SrHull)):
-        while not checktangent(T, lpointer, SlHull):
-            lpointer = (lpointer + 1) % len(SlHull)
-        while not checktangent(T, rpointer, SrHull):
-            rpointer = (rpointer - 1) % len(SrHull)
-    Hightengent = [SlHull[lpointer], SrHull[rpointer]]
+        # move p as long as it makes right turn
+        while right(SrHull[rpointer], SlHull[lpointer], SlHull[(lpointer - 1) % len(SlHull)]):
+            lpointer = (lpointer - 1) % len(SlHull)
+        if lpointer == prevlpointer and rpointer == prevrpointer:
+            break
 
+    # lower the bridge cp_p cp_q to the lower tangent
+    prev_p = None
+    prev_q = None
+    while True:
+        prevlpointer = l
+        prevrpointer = r
+        while right(SlHull[l], SrHull[r], SrHull[(r - 1) % len(SrHull)]):
+            r = (r - 1) % len(SrHull)
+        # move p as long as it makes right turn
+        while left(SrHull[r], SlHull[l], SlHull[(l + 1) % len(SlHull)]):
+            l = (l + 1) % len(SlHull)
+        if l == prevlpointer and r == prevrpointer:
+            break
+
+    Lowtengent = [SlHull[lpointer], SrHull[rpointer]]
+    Hightengent = [SlHull[l], SrHull[r]]
     return Hightengent, Lowtengent
 
 
@@ -434,7 +446,7 @@ def intersection(L1, L2):
         return [x, y]
     else:
         print(str(L1[0]) + "," + str(L1[1]) + " and " + str(L2[0]) + "," + str(L2[1]) + " no R.")
-        return [-1,-1]
+        return [-1, -1]
 
 
 def insidetheline(startpoint, endpoint, param):
@@ -455,7 +467,6 @@ def insidetheline(startpoint, endpoint, param):
                 return True
             else:
                 return False
-
 
     if min(startpoint[0], endpoint[0]) <= param[0] <= max(startpoint[0], endpoint[0]) and min(startpoint[1],
                                                                                               endpoint[1]) <= param[
@@ -678,16 +689,36 @@ def merageVD(Sl, Sr, SlVD, SrVD):
     SrHightangent = hightangent[1]
     SlLowtangent = lowtangent[0]
     Srlowtangent = lowtangent[1]
-    SlZindex = SlHull.index(SlHightangent)
-    SrZindex = SrHull.index(SrHightangent)
-    Slnextindex = SlZindex
-    Srnextindex = SrZindex
+    hightangentindex = [SlHull.index(SlHightangent), SrHull.index(SrHightangent)]
     lowtangentindex = [SlHull.index(SlLowtangent), SrHull.index(Srlowtangent)]
     sg = [SlHightangent, SrHightangent]
     sgpolygen = []
     hp = []
-    segmentpolygon = [[SlHightangent, SrHightangent]]
+    # sl走訪順序
+    front = hightangentindex[0]
+    rear = lowtangentindex[0]
+    Slseq = [SlHull[hightangentindex[0]]]
+    if len(SlHull) > 1:
+        while True:
+            front = (front - 1) % len(SlHull)
+            Slseq.append(SlHull[front])
+            if front == rear:
+                break
+    # sr走訪順序
+    front = hightangentindex[1]
+    rear = lowtangentindex[1]
+    Srseq = [SrHull[hightangentindex[1]]]
+    if len(SrHull) > 1:
+        while True:
+            front = (front + 1) % len(SrHull)
+            Srseq.append(SrHull[front])
+            if front == rear:
+                break
+    Slpointer = 0
+    Srpointer = 0
     while 1:
+        Slnextindex = None
+        Srnextindex = None
         sgpolygen.append(sg)
         lR = [-1, -1]
         rR = [-1, -1]
@@ -706,41 +737,60 @@ def merageVD(Sl, Sr, SlVD, SrVD):
         # step 4
         # Z是下一個可能的convex hull point
         # 1:1
-        if SlZindex != lowtangentindex[0]:
-            Slnextindex = (SlZindex - 1) % len(SlHull)
-        if SrZindex != lowtangentindex[1]:
-            Srnextindex = (SrZindex + 1) % len(SrHull)
-        if len(Sl) == 1 and len(Sr) == 1:
-            break
+
+        # if SlZindex != lowtangentindex[0]:
+        #     Slnextindex = (SlZindex - 1) % len(SlHull)
+        # if SrZindex != lowtangentindex[1]:
+        #     Srnextindex = (SrZindex + 1) % len(SrHull)
+
+        if Slpointer + 1 < len(Slseq):
+            Slnextindex = Slpointer + 1
+        if Srpointer + 1 < len(Srseq):
+            Srnextindex = Srpointer + 1
+        if Srnextindex is not None:
+            newBS = getBS([sg[1], Srseq[Srnextindex]])
+            rR = intersection(line(sgBS[0], sgBS[1]), line(newBS[0], newBS[1]))
+        if Slnextindex is not None:
+            newBS = getBS([sg[0], Slseq[Slnextindex]])
+            lR = intersection(line(sgBS[0], sgBS[1]), line(newBS[0], newBS[1]))
+
+        # 只有一個焦點
+        if lR == [-1, -1] and rR != lR:
+            sg = [sg[0], Srseq[Srnextindex]]
+            Srpointer += 1
+        elif rR == [-1, -1] and lR != rR:
+            sg = [Slseq[Slnextindex], sg[1]]
+            Slpointer += 1
         else:
-            if SrHull[Srnextindex] != sg[1]:
-                newBS = getBS([sg[1], SrHull[Srnextindex]])
-                rR = intersection(line(sgBS[0], sgBS[1]), line(newBS[0], newBS[1]))
-            if SlHull[Slnextindex] != sg[0]:
-                newBS = getBS([sg[0], SlHull[Slnextindex]])
-                lR = intersection(line(sgBS[0], sgBS[1]), line(newBS[0], newBS[1]))
-            # 只有一個焦點
-            if lR == [-1, -1] and rR != lR:
-                sg = [sg[0], SrHull[Srnextindex]]
-                SrZindex = Srnextindex
-            elif rR == [-1, -1] and lR != rR:
-                sg = [SlHull[Slnextindex], sg[1]]
-                SlZindex = Slnextindex
+            if lR[1] < rR[1]:
+                sg = [sg[0], Srseq[Srnextindex]]
+                Srpointer += 1
             else:
-                if lR[1] < rR[1]:
-                    sg = [sg[0], SrHull[Srnextindex]]
-                    SrZindex = Srnextindex
-                else:
-                    sg = [SlHull[Slnextindex], sg[1]]
-                    SlZindex = Slnextindex
+                sg = [Slseq[Slnextindex], sg[1]]
+                Slpointer += 1
     # step 5
     resultVD = reconstruct(hp, SlVD, SrVD, sgpolygen)
     return resultVD
 
 
-def getVolonoi(inputPoints):
+def printVD(pointlist, VD, color, myGUI):
+    edges = []
+    for i in range(VD.getedgesize()):
+        startX = VD.xVertex[VD.startVertex[i]]
+        startY = VD.yVertex[VD.startVertex[i]]
+        endX = VD.xVertex[VD.endVertex[i]]
+        endY = VD.yVertex[VD.endVertex[i]]
+        edges.append([(startX, startY), (endX, endY)])
+
+    edges = sorted(edges, key=lambda edge: [edge[0][0], edge[0][1], edge[1][0], edge[1][1]])
+    myGUI.printedges(edges, 'red')
+    myGUI.printpoint(pointlist, color)
+
+
+def getVolonoi(inputPoints, myGUI):
     # Input: list[list]
     # Output: VP
+    global Btn
     Sl = []
     Sr = []
     if len(inputPoints) == 1:
@@ -758,9 +808,13 @@ def getVolonoi(inputPoints):
                     Sr.append(point)
         else:
             Sr.append(point)
-    SlVD = getVolonoi(Sl)
-    SrVD = getVolonoi(Sr)
+    SlVD = getVolonoi(Sl, myGUI)
+    SrVD = getVolonoi(Sr, myGUI)
 
+    printVD(Sl, SlVD, 'blue', myGUI)
+    printVD(Sr, SrVD, 'yellow', myGUI)
+    if myGUI.stepFlag:
+        myGUI.guiwait()
     ResultVD = merageVD(Sl, Sr, SlVD, SrVD)
 
     return ResultVD
@@ -768,7 +822,7 @@ def getVolonoi(inputPoints):
 
 # Press the green button in the gutter to run the script.
 
-def volonoialgorithm(pointlist):
+def volonoialgorithm(pointlist, myGUI):
     cleanlist = []
     arr = [[200, 200], [200, 300], [200, 400]]
     # pointlist 處理
@@ -779,9 +833,8 @@ def volonoialgorithm(pointlist):
     pointlist = cleanlist
     pointlist = sorted(pointlist, key=lambda k: [k[0], k[1]])
 
-    # testdirection()
     edges = []
-    result = getVolonoi(pointlist)
+    result = getVolonoi(pointlist, myGUI)
 
     for i in range(result.getedgesize()):
         startX = result.xVertex[result.startVertex[i]]
@@ -795,15 +848,4 @@ def volonoialgorithm(pointlist):
         print("E: (" + str(edges[i][0][0]) + ", " + str(edges[i][0][1]) + "), (" + str(edges[i][1][0]) + ", " + str(
             edges[i][1][1]) + ")")
     return pointlist, edges
-
-
-def testdirection():
-    arr = [[147, 190], [164, 361], [283, 233]]
-    result = directionOfPoint(arr[0], arr[1], arr[2])
-    if result > 0:
-        print("right")
-    elif result < 0:
-        print("left")
-    else:
-        print("zero")
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

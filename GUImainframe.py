@@ -1,148 +1,102 @@
-#M083040027 王鈞佑 Chun-Yu Wang 220201108
-import codecs
-
-
+# M083040027 王鈞佑 Chun-Yu Wang 220201108
+from volonoi import *
 import tkinter as tk
 from tkinter import filedialog
+# def makeorder(list, stack):
+#     if len(list) == 1:
+#         stack.append(list)
+#         return stack
+#     Sl = []
+#     Sr = []
+#     median = np.mean(list, axis=0)
+#     if list:
+#         for point in list:
+#             if point[0] <= median[0]:
+#                 if point[0] < median[0]:
+#                     Sl.append(point)
+#                 else:
+#                     if point[1] >= median[1]:
+#                         Sl.append(point)
+#                     else:
+#                         Sr.append(point)
+#             else:
+#                 Sr.append(point)
+#         stack = makeorder(Sl, stack)
+#         stack = makeorder(Sr, stack)
+#         stack.append(Sl + Sr)
+#     return stack
 
-import numpy as np
+class MainApplication():
+    def __init__(self, master):
+        if __name__ == '__main__':
+            self.master = master
+            master.title("M083040027 volonoi")
+            master.geometry('1024x768')
+            master.resizable(0, 0)
+            self.guistr = tk.StringVar()
+            self.var = tk.BooleanVar()
+            self.startFlag = False
+            self.stepFlag = False
+            self.loadnextFlag = False
+            self.pointlist = []
+            self.listorder = []
+            self.Inputdata = []
+            self.count = 0
+            self.inputnextcount = 0
+            self.outputpointlist = []
+            self.outputedgelist = []
+            self.canvas = tk.Canvas(master, bg='#D0D0D0', height=600, width=600)
+            self.canvas.bind('<Button 1>', lambda event: self.left_click(event))
+            self.canvas.grid(row=0, column=0, rowspan=5)
+            self.startBtn = tk.Button(self.master, text='start', width=15, height=2, command=lambda: self.start())
+            self.startBtn.grid(row=0, column=1)
+            self.StepStartBtn = tk.Button(self.master, text='stepstart', width=15, height=2,
+                                          command=lambda : self.stepstart())
+            self.StepStartBtn.grid(row=1, column=1)
+            self.StepBtn = tk.Button(self.master, text='step', width=15, height=2, command=self.step)
+            self.StepBtn.grid(row=1, column=2)
+            self.cleanBtn = tk.Button(self.master, text='clear', width=15, height=2, command=lambda : self.clear())
+            self.cleanBtn.grid(row=2, column=1)
+            self.InputBtn = tk.Button(self.master, text='load', width=15, height=2, command=lambda: self.load())
+            self.InputBtn.grid(row=3, column=1)
+            self.OutputBtn = tk.Button(self.master, text='save', width=15, height=2, command=self.save)
+            self.OutputBtn.grid(row=4, column=1)
+            self.NextBtn = tk.Button(self.master, text='next', width=15, height=2,
+                                     command=lambda: self.inputnext(self.Inputdata))
+            self.NextBtn.grid(row=3, column=2)
+            self.currentPointlist = tk.Label(self.master, text="Current PointList")
+            self.currentPointlist.grid(row=5, column=0)
 
-import volonoi as vp
-
-if __name__ == '__main__':
-
-    window = tk.Tk()
-    window.title('my window')
-    window.geometry('1024x768')
-    window.resizable(0,0)
-    var = tk.StringVar()
-    startFlag = False
-    stepFlag = False
-    loadnextFlag = False
-    pointlist = []
-    listorder = []
-    Inputdata = []
-    count = 0
-    inputnextcount = 0
-
-    outputpointlist = []
-    outputedgelist = []
-
-
-    def printsinglepoint(point):
-        canvas.create_oval(point[0] - 2, point[1] - 2, point[0] + 2, point[1] + 2, fill='black')
-
-
-    def left_click(label):
-        global pointlist
-        print('clicked left button at x = % d, y = % d' % (label.x, label.y))
-        pointlist.append([label.x, label.y])
-        printsinglepoint([label.x, label.y])
-        for p in pointlist:
-            print("pointlist: x = % d, y = % d" % (p[0], p[1]))
-
-
-    def printedges(edges, color):
-        for edge in edges:
-            canvas.create_line(edge[0][0], edge[0][1], edge[1][0], edge[1][1], fill=color)
-        #canvas.update()
-
-
-    def printpoint(points, color):
-        for point in points:
-            canvas.create_oval(point[0]-2, point[1]-2, point[0]+2, point[1]+2, fill=color)
-
-
-
-
-    def drawResult(edges, points):
-        canvas.delete("all")
-        printedges(edges, 'red')
-        printpoint(points, 'black')
-
-
-    def start():
-        global startFlag
-        global pointlist
-        global outputpointlist
-        global outputedgelist
+    def start(self):
 
         def takeSecond(elem):
             return elem[0]
-        pointlist.sort(key=takeSecond)
-        if startFlag == False:
-            var.set('press the button')
-            if pointlist:
-                points, edges = vp.volonoialgorithm(pointlist)
-                outputedgelist = edges
-                outputpointlist = points
-                drawResult(edges, points)
 
-        # else:
-        #     startFlag = False
-        #     var.set('already start')
+        self.pointlist.sort(key=takeSecond)
+        if self.startFlag == False:
+            self.guistr.set('press the button')
+            if self.pointlist:
+                points, edges = volonoialgorithm(self.pointlist, self)
+                self.outputedgelist = edges
+                self.outputpointlist = points
+                self.drawResult(edges, points)
 
-    def clear():
-        global pointlist, startFlag, stepFlag, loadnextFlag, listorder, Inputdata, count, inputnextcount, outputpointlist, outputedgelist
-        canvas.delete("all")
-        startFlag = False
-        stepFlag = False
-        loadnextFlag = False
-        pointlist = []
-        listorder = []
-        Inputdata = []
-        count = 0
-        inputnextcount = 0
-        outputpointlist = []
-        outputedgelist = []
+    def clear(self):
+        self.canvas.delete("all")
+        self.startFlag = False
+        self.stepFlag = False
+        self.loadnextFlag = False
+        self.pointlist = []
+        self.listorder = []
+        self.Inputdata = []
+        self.count = 0
+        self.inputnextcount = 0
+        self.outputpointlist = []
+        self.outputedgelist = []
 
-    def makeorder(list, stack):
-        if len(list) == 1:
-            stack.append(list)
-            return stack
-        Sl = []
-        Sr = []
-        median = np.mean(list, axis=0)
-        if list:
-            for point in list:
-                if point[0] <= median[0]:
-                    if point[0] < median[0]:
-                        Sl.append(point)
-                    else:
-                        if point[1] >= median[1]:
-                            Sl.append(point)
-                        else:
-                            Sr.append(point)
-                else:
-                    Sr.append(point)
-            stack = makeorder(Sl, stack)
-            stack = makeorder(Sr, stack)
-            stack.append(Sl+Sr)
-        return stack
+    def load(self):
+        self.loadnextFlag = True
 
-    def step():
-        global stepFlag
-        global listorder
-        global count
-        if stepFlag == False:
-            listorder = []
-            stepFlag = True
-            listorder = makeorder(pointlist, [])
-            print(listorder)
-        else:
-            if count == len(listorder):
-                print("the end")
-                clear()
-                count = 0
-            if count > 0:
-                printpoint(listorder[count-1], 'blue')
-            printpoint(listorder[count], 'red')
-            count+=1
-
-    def load():
-        global loadnextFlag
-        global Inputdata
-        loadnextFlag = True
         def RepresentsInt(s):
             try:
                 int(s)
@@ -150,9 +104,9 @@ if __name__ == '__main__':
             except ValueError:
                 return False
 
-        window.filename = filedialog.askopenfilename(initialdir="./", parent=window, title='Choose a file')
+        self.master.filename = filedialog.askopenfilename(initialdir="./", parent=self.master, title='Choose a file')
 
-        file = open(window.filename, encoding="UTF-8")
+        file = open(self.master.filename, encoding="UTF-8")
         lines = []
         Inputdata = []
         if file:
@@ -164,7 +118,7 @@ if __name__ == '__main__':
                     point = []
                     if int(lines[i]) == 0:
                         break
-                    for j in range(i+1,i+int(lines[i])+1):
+                    for j in range(i + 1, i + int(lines[i]) + 1):
                         point.append(list(map(int, lines[j].split())))
                     Inputdata.append(point)
                 else:
@@ -173,74 +127,88 @@ if __name__ == '__main__':
                     elif lines[i][0] == "P":
                         newline = list(lines[i].split())
                         tmppoint = [float(newline[1]), float(newline[2])]
-                        outputpointlist.append(tmppoint)
-                        printpoint([tmppoint], 'black')
+                        self.outputpointlist.append(tmppoint)
+                        self.printpoint([tmppoint], 'black')
                     elif lines[i][0] == "E":
                         newline = list(lines[i].split())
                         tmpedge = [[float(newline[1]), float(newline[2])], [float(newline[3]), float(newline[4])]]
-                        outputedgelist.append(tmpedge)
-                        printedges([tmpedge], 'red')
+                        self.outputedgelist.append(tmpedge)
+                        self.printedges([tmpedge], 'red')
             for thelist in Inputdata:
                 print(thelist)
                 print("----------------")
 
             file.close()
 
-
-    def save():
-        global outputedgelist, outputpointlist
+    def save(self):
         outputfile = open('outputfile.txt', 'w')
         outputstr = ""
-        for p in outputpointlist:
-            outputstr += "P "+str(p[0])+" "+str(p[1])+"\n"
-        for e in outputedgelist:
-            outputstr += "E " + str(e[0][0]) + " " + str(e[0][1]) + " "+ str(e[1][0]) + " " + str(e[1][1]) +"\n"
+        for p in self.outputpointlist:
+            outputstr += "P " + str(p[0]) + " " + str(p[1]) + "\n"
+        for e in self.outputedgelist:
+            outputstr += "E " + str(e[0][0]) + " " + str(e[0][1]) + " " + str(e[1][0]) + " " + str(e[1][1]) + "\n"
         outputfile.write(outputstr)
         outputfile.close()
 
-
-    def inputnext(data):
-        global pointlist
-        global inputnextcount
-        global loadnextFlag
-        global currentPointlist
-        if loadnextFlag == True:
-            if inputnextcount == len(data):
+    def inputnext(self, data):
+        if self.loadnextFlag == True:
+            if self.inputnextcount == len(data):
                 print("the end")
-                clear()
-                inputnextcount =0
-                loadnextFlag = False
-                currentPointlist.configure(text="Current PointList")
-            elif inputnextcount >= 0:
-                pointlist = data[inputnextcount]
+                self.clear()
+                self.inputnextcount = 0
+                self.loadnextFlag = False
+                self.currentPointlist.configure(text="Current PointList")
+            elif self.inputnextcount >= 0:
+                pointlist = data[self.inputnextcount]
                 sumstr = ""
                 for point in pointlist:
                     sumstr += "[%d, %d] " % (point[0], point[1])
-                currentPointlist.configure(text=sumstr)
+                self.currentPointlist.configure(text=sumstr)
 
-                inputnextcount += 1
+                self.inputnextcount += 1
 
+    def step(self):
+        if self.var.get():
+            self.var.set(False)
+        else:
+            self.var.set(True)
+        print(self.var.get())
 
-    canvas = tk.Canvas(window, bg='#D0D0D0', height=600, width=600)
-    canvas.bind('<Button 1>', left_click)
-    canvas.grid(row=0, column=0, rowspan=5)
+    def stepstart(self):
+        if not self.stepFlag:
+            self.stepFlag = True
+            self.start()
 
+    def left_click(self, label):
+        print('clicked left button at x = % d, y = % d' % (label.x, label.y))
+        self.pointlist.append([label.x, label.y])
+        self.printsinglepoint([label.x, label.y])
+        for p in self.pointlist:
+            print("pointlist: x = % d, y = % d" % (p[0], p[1]))
 
-    startBtn = tk.Button(window, text='start', width=15, height=2, command=start)
-    startBtn.grid(row=0,column=1)
-    StepBtn = tk.Button(window, text='step', width=15, height=2, command=step)
-    StepBtn.grid(row=1,column=1)
-    cleanBtn = tk.Button(window, text='clear', width=15, height=2, command=clear)
-    cleanBtn.grid(row=2,column=1)
-    InputBtn = tk.Button(window, text='load', width=15, height=2, command=load)
-    InputBtn.grid(row=3,column=1)
-    OutputBtn = tk.Button(window, text='save', width=15, height=2, command=save)
-    OutputBtn.grid(row=4, column=1)
-    NextBtn = tk.Button(window, text='next', width=15, height=2, command=lambda: inputnext(Inputdata))
-    NextBtn.grid(row=3, column=2)
+    def printsinglepoint(self, point):
+        self.canvas.create_oval(point[0] - 2, point[1] - 2, point[0] + 2, point[1] + 2, fill='black')
 
-    currentPointlist = tk.Label(window, text="Current PointList")
-    currentPointlist.grid(row=5, column=0)
+    def guiwait(self):
+        print("waiting...")
+        print(self.var.get())
+        self.StepBtn.wait_variable(self.var)
+        print("done waiting.")
 
+    def printedges(self, edges, color):
+        for edge in edges:
+            self.canvas.create_line(edge[0][0], edge[0][1], edge[1][0], edge[1][1], fill=color)
 
-    window.mainloop()
+    def printpoint(self, points, color):
+        for point in points:
+            self.canvas.create_oval(point[0] - 2, point[1] - 2, point[0] + 2, point[1] + 2, fill=color)
+
+    def drawResult(self, edges, points):
+        self.canvas.delete("all")
+        self.printedges(edges, 'red')
+        self.printpoint(points, 'black')
+
+if __name__ == '__main__':
+    root = tk.Tk()
+    myGUI = MainApplication(root)
+    root.mainloop()
