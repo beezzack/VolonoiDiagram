@@ -62,17 +62,18 @@ class MainApplication():
             self.OutputBtn = tk.Button(self.master, text='save', width=15, height=2, command=self.save)
             self.OutputBtn.grid(row=4, column=1)
             self.NextBtn = tk.Button(self.master, text='next', width=15, height=2,
-                                     command=lambda: self.inputnext(self.Inputdata))
+                                     command=lambda: self.inputnext())
             self.NextBtn.grid(row=3, column=2)
             self.currentPointlist = tk.Label(self.master, text="Current PointList")
             self.currentPointlist.grid(row=5, column=0)
 
     def start(self):
-
         def takeSecond(elem):
             return elem[0]
 
         self.pointlist.sort(key=takeSecond)
+        self.canvas.delete("all")
+        self.printpoint(self.pointlist, 'black')
         if self.startFlag == False:
             self.guistr.set('press the button')
             if self.pointlist:
@@ -80,6 +81,9 @@ class MainApplication():
                 self.outputedgelist = edges
                 self.outputpointlist = points
                 self.drawResult(edges, points)
+                self.stepFlag = False
+
+
 
     def clear(self):
         self.canvas.delete("all")
@@ -108,7 +112,7 @@ class MainApplication():
 
         file = open(self.master.filename, encoding="UTF-8")
         lines = []
-        Inputdata = []
+        self.Inputdata = []
         if file:
             for line in file:
                 lines.append(line.rstrip('\n'))
@@ -120,7 +124,7 @@ class MainApplication():
                         break
                     for j in range(i + 1, i + int(lines[i]) + 1):
                         point.append(list(map(int, lines[j].split())))
-                    Inputdata.append(point)
+                    self.Inputdata.append(point)
                 else:
                     if lines[i] == "":
                         pass
@@ -133,8 +137,8 @@ class MainApplication():
                         newline = list(lines[i].split())
                         tmpedge = [[float(newline[1]), float(newline[2])], [float(newline[3]), float(newline[4])]]
                         self.outputedgelist.append(tmpedge)
-                        self.printedges([tmpedge], 'red')
-            for thelist in Inputdata:
+                        self.printedges([tmpedge], 'red', 'edge')
+            for thelist in self.Inputdata:
                 print(thelist)
                 print("----------------")
 
@@ -150,18 +154,18 @@ class MainApplication():
         outputfile.write(outputstr)
         outputfile.close()
 
-    def inputnext(self, data):
+    def inputnext(self):
         if self.loadnextFlag == True:
-            if self.inputnextcount == len(data):
+            if self.inputnextcount == len(self.Inputdata):
                 print("the end")
                 self.clear()
                 self.inputnextcount = 0
                 self.loadnextFlag = False
                 self.currentPointlist.configure(text="Current PointList")
             elif self.inputnextcount >= 0:
-                pointlist = data[self.inputnextcount]
+                self.pointlist = self.Inputdata[self.inputnextcount]
                 sumstr = ""
-                for point in pointlist:
+                for point in self.pointlist:
                     sumstr += "[%d, %d] " % (point[0], point[1])
                 self.currentPointlist.configure(text=sumstr)
 
@@ -187,7 +191,7 @@ class MainApplication():
             print("pointlist: x = % d, y = % d" % (p[0], p[1]))
 
     def printsinglepoint(self, point):
-        self.canvas.create_oval(point[0] - 2, point[1] - 2, point[0] + 2, point[1] + 2, fill='black')
+        self.canvas.create_oval(point[0] - 2, point[1] - 2, point[0] + 2, point[1] + 2, fill='black', tags="point")
 
     def guiwait(self):
         print("waiting...")
@@ -195,17 +199,17 @@ class MainApplication():
         self.StepBtn.wait_variable(self.var)
         print("done waiting.")
 
-    def printedges(self, edges, color):
+    def printedges(self, edges, color, tag):
         for edge in edges:
-            self.canvas.create_line(edge[0][0], edge[0][1], edge[1][0], edge[1][1], fill=color)
+            self.canvas.create_line(edge[0][0], edge[0][1], edge[1][0], edge[1][1], fill=color, tags=tag)
 
     def printpoint(self, points, color):
         for point in points:
-            self.canvas.create_oval(point[0] - 2, point[1] - 2, point[0] + 2, point[1] + 2, fill=color)
+            self.canvas.create_oval(point[0] - 2, point[1] - 2, point[0] + 2, point[1] + 2, fill=color, tags="point")
 
     def drawResult(self, edges, points):
         self.canvas.delete("all")
-        self.printedges(edges, 'red')
+        self.printedges(edges, 'red', 'edge')
         self.printpoint(points, 'black')
 
 if __name__ == '__main__':
