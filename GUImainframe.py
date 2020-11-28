@@ -2,29 +2,6 @@
 from volonoi import *
 import tkinter as tk
 from tkinter import filedialog
-# def makeorder(list, stack):
-#     if len(list) == 1:
-#         stack.append(list)
-#         return stack
-#     Sl = []
-#     Sr = []
-#     median = np.mean(list, axis=0)
-#     if list:
-#         for point in list:
-#             if point[0] <= median[0]:
-#                 if point[0] < median[0]:
-#                     Sl.append(point)
-#                 else:
-#                     if point[1] >= median[1]:
-#                         Sl.append(point)
-#                     else:
-#                         Sr.append(point)
-#             else:
-#                 Sr.append(point)
-#         stack = makeorder(Sl, stack)
-#         stack = makeorder(Sr, stack)
-#         stack.append(Sl + Sr)
-#     return stack
 
 class MainApplication():
     def __init__(self, master):

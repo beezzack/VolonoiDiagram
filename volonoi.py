@@ -2,9 +2,11 @@
 
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import math
+
 import numpy as np
 
-screensize = 800
+screensize = 1000
 
 # Constant integers for directions
 RIGHT = 1
@@ -24,8 +26,8 @@ class Vp:
         # polygon: inPoint+1
         self.edgeAoundPolygon = []
         # polygon point
-        self.xPolygon = [99999]
-        self.yPolygon = [99999]
+        self.xPolygon = []
+        self.yPolygon = []
 
         # Vertex: 2*inPoint - 2
         self.edgeAoundVetex = []
@@ -71,6 +73,25 @@ class Vp:
                 return i
         return False
 
+    def deleteEdge(self, index):
+        # # wVertex: 1 if vertex is ordinary point, 0 if vertex at infinity
+        # self.xVertex.pop(self.startVertex[index])
+        # self.yVertex.pop(self.startVertex[index])
+        # self.wVertex.pop(self.startVertex[index])
+        # self.xVertex.pop(self.endVertex[index])
+        # self.yVertex.pop(self.endVertex[index])
+        # self.wVertex.pop(self.endVertex[index])
+        # Edge: 3*inPoint - 3
+        self.rightPloygon.pop(index)
+        self.leftPloygon.pop(index)
+        self.startVertex.pop(index)
+        self.endVertex.pop(index)
+        # cw: clockwise, ccw: counterclockwise
+        self.cwPredecessor.pop(index)
+        self.ccwPredecessor.pop(index)
+        self.cwSuccessor.pop(index)
+        self.ccwSuccessor.pop(index)
+
 
 def getEdgePolygon(theVp, vertexNum):
     # Input : VP, integer
@@ -115,14 +136,14 @@ def getEdgeVertex(theVp, PolygonNum):
 def getHull(VD):
     # Input VD
     # Ouput list[list]
-    global polygon
+    polygonfront = None
     convexhull = []
-    versize = VD.getVersize()
-    if versize <= 3:
-        if versize == 0:
+    polysize = VD.getPolysize()
+    if polysize <= 3:
+        if polysize == 0:
             convexhull.append([VD.xPolygon[0], VD.yPolygon[0]])
         else:
-            for i in range(versize):
+            for i in range(polysize):
                 convexhull.append([VD.xPolygon[i], VD.yPolygon[i]])
         return convexhull
 
@@ -131,11 +152,11 @@ def getHull(VD):
         endV = VD.endVertex[i]
         if (VD.wVertex[startV] == 1 and VD.wVertex[endV] == 0) or (VD.wVertex[startV] == 0 and VD.wVertex[endV] == 1):
             # an infinite ray
-            polygon = VD.leftPloygon[i]
-            convexhull.append([VD.xPolygon[polygon], VD.yPolygon[polygon]])
+            polygonfront = VD.leftPloygon[i]
+            convexhull.append([VD.xPolygon[polygonfront], VD.yPolygon[polygonfront]])
             break
 
-    startploygon = polygon
+    startploygon = polygonfront
     while 1:
         Lc, Lv = getEdgeVertex(VD, startploygon)
         for edge in Lc:
@@ -147,7 +168,7 @@ def getHull(VD):
                 startploygon = VD.leftPloygon[edge]
                 convexhull.append([VD.xPolygon[startploygon], VD.yPolygon[startploygon]])
                 break
-        if polygon == startploygon:
+        if polygonfront == startploygon:
             break
 
     return convexhull
@@ -224,33 +245,25 @@ def getTangent(SlHull, SrHull):
                 Rightpoint = point
                 r = SrHull.index(Rightpoint)
 
-    lpointer = l
-    rpointer = r
-    prevlpointer = None
-    prevrpointer = None
-    while True:
-        prevlpointer = lpointer
-        prevrpointer = rpointer
-        while left(SlHull[lpointer], SrHull[rpointer], SrHull[(rpointer + 1) % len(SrHull)]):
-            rpointer = (rpointer + 1) % len(SrHull)
+    lpointer_1 = l
+    rpointer_1 = r
+    while left(SlHull[lpointer_1], SrHull[rpointer_1], SrHull[(rpointer_1 + 1) % len(SrHull)]) or left(SlHull[lpointer_1], SrHull[rpointer_1], SlHull[(lpointer_1 - 1) % len(SlHull)]):
+        while left(SlHull[lpointer_1], SrHull[rpointer_1], SrHull[(rpointer_1 + 1) % len(SrHull)]):
+            rpointer_1 = (rpointer_1 + 1) % len(SrHull)
         # move p as long as it makes right turn
-        while right(SrHull[rpointer], SlHull[lpointer], SlHull[(lpointer - 1) % len(SlHull)]):
-            lpointer = (lpointer - 1) % len(SlHull)
-        if lpointer == prevlpointer and rpointer == prevrpointer:
-            break
-    while True:
-        prevlpointer = l
-        prevrpointer = r
-        while right(SlHull[l], SrHull[r], SrHull[(r - 1) % len(SrHull)]):
-            r = (r - 1) % len(SrHull)
+        while left(SlHull[lpointer_1], SrHull[rpointer_1], SlHull[(lpointer_1 - 1) % len(SlHull)]):
+            lpointer_1 = (lpointer_1 - 1) % len(SlHull)
+    lpointer_2 = l
+    rpointer_2 = r
+    while right(SlHull[lpointer_2], SrHull[rpointer_2], SrHull[(rpointer_2 - 1) % len(SrHull)]) or right(SlHull[lpointer_2], SrHull[rpointer_2], SlHull[(lpointer_2 + 1) % len(SlHull)]):
+        while right(SlHull[lpointer_2], SrHull[rpointer_2], SrHull[(rpointer_2 - 1) % len(SrHull)]):
+            rpointer_2 = (rpointer_2 - 1) % len(SrHull)
         # move p as long as it makes right turn
-        while left(SrHull[r], SlHull[l], SlHull[(l + 1) % len(SlHull)]):
-            l = (l + 1) % len(SlHull)
-        if l == prevlpointer and r == prevrpointer:
-            break
+        while right(SlHull[lpointer_2], SrHull[rpointer_2], SlHull[(lpointer_2 + 1) % len(SlHull)]):
+            lpointer_2 = (lpointer_2 + 1) % len(SlHull)
 
-    Lowtengent = [SlHull[lpointer], SrHull[rpointer]]
-    Hightengent = [SlHull[l], SrHull[r]]
+    Lowtengent = [SlHull[lpointer_1], SrHull[rpointer_1]]
+    Hightengent = [SlHull[lpointer_2], SrHull[rpointer_2]]
     return Hightengent, Lowtengent
 
 
@@ -384,10 +397,9 @@ def unionhp_Tri(sg, hp, sgBS, Sl, Sr):
     return hp
 
 
-def unionhp(sg, hp, sgBS):
+def unionhp(hp, sgBS):
     # Input list[line], line = [[x1, y1], [x2, y2]] 
     # output list[line]
-    mid = [(sg[1][0] + sg[0][0]) / 2, (sg[1][1] + sg[0][1]) / 2]
     # 2point
     if not hp:
         hp.append(sgBS)
@@ -422,7 +434,7 @@ def intersection(L1, L2):
         y = Dy / D
         return [x, y]
     else:
-        print(str(L1[0]) + "," + str(L1[1]) + " and " + str(L2[0]) + "," + str(L2[1]) + " no R.")
+        print(str(L1[0]) + ", " + str(L1[1]) + " and " + str(L2[0]) + ", " + str(L2[1]) + " no R.")
         return [-1, -1]
 
 
@@ -468,83 +480,94 @@ def findpolygonindex(poly, SlVD):
     return index
 
 
-def discardVD(hp, VD, myGUI):
+def discardVD(hp, VD, myGUI, VDdirection):
     hpsize = len(hp)
     hpset = [hp[0][0]]
+    deleteedgeindex = set()
     for i in range(hpsize):
         hpset.append(hp[i][1])
 
-    if VD.startVertex and VD.endVertex:
-        for i in range(VD.getedgesize()):
-            start = VD.startVertex[i]
-            end = VD.endVertex[i]
-            # start vertex index
-            startpoint = [VD.xVertex[start], VD.yVertex[start]]
-            endpoint = [VD.xVertex[end], VD.yVertex[end]]
-            for j in range(len(hpset)):
-                if collinear(startpoint, endpoint, hpset[j]) and insidetheline(startpoint, endpoint,
-                                                                                       hpset[j]):
-                    startdirection = directionOfPoint([hpset[j-1][0], hpset[j-1][1]], [hpset[j][0], hpset[j][1]], startpoint)
-                    hpdirection = directionOfPoint([hpset[j-1][0], hpset[j-1][1]], [hpset[j][0], hpset[j][1]], [hpset[j+1][0], hpset[j+1][1]])
+    for hppoint in range(len(hpset)):
+        if hppoint - 1 < 0 or hppoint + 1 >= len(hpset):
+            continue
+        # 找有沒有線段是橫跨hppoint 兩側
+        if VD.startVertex and VD.endVertex:
+            for i in range(VD.getedgesize()):
+                start = VD.startVertex[i]
+                end = VD.endVertex[i]
+                # start vertex index
+                startpoint = [VD.xVertex[start], VD.yVertex[start]]
+                endpoint = [VD.xVertex[end], VD.yVertex[end]]
+                startdirection = directionOfPoint([hpset[hppoint - 1][0], hpset[hppoint - 1][1]],
+                                                  [hpset[hppoint][0], hpset[hppoint][1]],
+                                                  startpoint)
+                enddirection = directionOfPoint([hpset[hppoint - 1][0], hpset[hppoint - 1][1]],
+                                                [hpset[hppoint][0], hpset[hppoint][1]],
+                                                endpoint)
+                hpdirection = directionOfPoint([hpset[hppoint - 1][0], hpset[hppoint - 1][1]],
+                                               [hpset[hppoint][0], hpset[hppoint][1]],
+                                               [hpset[hppoint + 1][0], hpset[hppoint + 1][1]])
+                if insidetheline(startpoint, endpoint, hpset[hppoint]) and collinear(startpoint, endpoint,
+                                                                                     hpset[hppoint]):
+                    # 增加新點
+                    VD.xVertex.append(hpset[hppoint][0])
+                    VD.yVertex.append(hpset[hppoint][1])
+                    VD.wVertex.append(1)
+                    hppointindex = VD.getverIndex(hpset[hppoint])
                     if hpdirection == LEFT:
                         if startdirection == RIGHT:
-                            VD.xVertex[end] = hpset[j][0]
-                            VD.yVertex[end] = hpset[j][1]
+                            # 指向新點
+                            VD.startVertex[i] = VD.getverIndex(startpoint)
+                            VD.endVertex[i] = hppointindex
                             VD.ccwSuccessor[i] = 0
                             VD.cwSuccessor[i] = 0
                         else:
-                            VD.xVertex[start] = hpset[j][0]
-                            VD.yVertex[start] = hpset[j][1]
+                            # 指向新點
+                            hppointindex = VD.getverIndex(hpset[hppoint])
+                            VD.endVertex[i] = VD.getverIndex(endpoint)
+                            VD.startVertex[i] = hppointindex
                             VD.ccwPredecessor[i] = 0
                             VD.cwPredecessor[i] = 0
                     elif hpdirection == RIGHT:
                         if startdirection == LEFT:
-                            VD.xVertex[end] = hpset[j][0]
-                            VD.yVertex[end] = hpset[j][1]
+                            # 指向新點
+                            VD.startVertex[i] = VD.getverIndex(startpoint)
+                            VD.endVertex[i] = hppointindex
                             VD.ccwSuccessor[i] = 0
                             VD.cwSuccessor[i] = 0
                         else:
-                            VD.xVertex[start] = hpset[j][0]
-                            VD.yVertex[start] = hpset[j][1]
+                            # 指向新點
+                            VD.endVertex[i] = VD.getverIndex(endpoint)
+                            VD.startVertex[i] = hppointindex
                             VD.ccwPredecessor[i] = 0
                             VD.cwPredecessor[i] = 0
+                    else:
+                        VD.endVertex[i] = hppointindex
+                        VD.startVertex.append(hppointindex)
+                        VD.endVertex.append(end)
+                        break
+                    start = VD.startVertex[i]
+                    end = VD.endVertex[i]
+                    myGUI.printedges([[[VD.xVertex[start], VD.yVertex[start]], [VD.xVertex[end], VD.yVertex[end]]]],
+                                     'blue',
+                                     'discardresult')
+                    if myGUI.stepFlag:
+                        myGUI.guiwait()
+                elif startdirection == enddirection != VDdirection:
+                    deleteedgeindex.add(i)
 
-
-                    # if direction == LEFT:
-                    #     if directionOfPoint(hpset[0], hpset[hpsize - 1], midpoint) == LEFT:
-                    #         VD.xVertex[start] = hppoint[0]
-                    #         VD.yVertex[start] = hppoint[1]
-                    #         VD.ccwPredecessor[i] = 0
-                    #         VD.cwPredecessor[i] = 0
-                    #     else:
-                    #         VD.xVertex[end] = hppoint[0]
-                    #         VD.yVertex[end] = hppoint[1]
-                    #         VD.ccwSuccessor[i] = 0
-                    #         VD.cwSuccessor[i] = 0
-                    # elif direction == RIGHT:
-                    #     if directionOfPoint(hpset[0], hpset[hpsize - 1], midpoint) == RIGHT:
-                    #         VD.xVertex[start] = hppoint[0]
-                    #         VD.yVertex[start] = hppoint[1]
-                    #         VD.ccwPredecessor[i] = 0
-                    #         VD.cwPredecessor[i] = 0
-                    #     else:
-                    #         VD.xVertex[end] = hppoint[0]
-                    #         VD.yVertex[end] = hppoint[1]
-                    #         VD.ccwSuccessor[i] = 0
-                    #         VD.cwSuccessor[i] = 0
-            myGUI.printedges([[[VD.xVertex[start], VD.yVertex[start]], [VD.xVertex[end], VD.yVertex[end]]]], 'blue',
-                             'discardresult')
-            if myGUI.stepFlag:
-                myGUI.guiwait()
-    myGUI.canvas.delete('discardresult')
+    for deleteindex in deleteedgeindex:
+        VD.deleteEdge(deleteindex)
     return VD
 
 
 def reconstruct(hp, SlVD, SrVD, sgpolygen, myGUI):
+    global LEFT, RIGHT
     hpsize = len(hp)
     if hpsize > 1:
-        SlVD = discardVD(hp, SlVD, myGUI)
-        SrVD = discardVD(hp, SrVD, myGUI)
+        SlVD = discardVD(hp, SlVD, myGUI, LEFT)
+        SrVD = discardVD(hp, SrVD, myGUI, RIGHT)
+        myGUI.canvas.delete('discardresult')
 
     SlVDedge = SlVD.getedgesize()
     SlVDpoly = SlVD.getPolysize()
@@ -565,17 +588,6 @@ def reconstruct(hp, SlVD, SrVD, sgpolygen, myGUI):
         # polygon point
         SlVD.xPolygon.append(SrVD.xPolygon[i])
         SlVD.yPolygon.append(SrVD.yPolygon[i])
-    SlVD.xPolygon.pop(SlVDpoly - 1)
-    SlVD.yPolygon.pop(SlVDpoly - 1)
-    newinfiniteindex = SlVD.getPolysize() - 1
-    # 先處理無限邊
-    for i in range(SlVDedge):
-        # Edge: 3*inPoint - 3
-        if SlVD.rightPloygon[i] == SlVDpoly - 1:
-            SlVD.rightPloygon[i] = newinfiniteindex
-        elif SlVD.leftPloygon[i] == SlVDpoly - 1:
-            SlVD.leftPloygon[i] = newinfiniteindex
-    # input right edge in to left
     for i in range(SrVDedge):
         SlVD.rightPloygon.append(SrVD.rightPloygon[i] + SlVDpoly - 1)
         SlVD.leftPloygon.append(SrVD.leftPloygon[i] + SlVDpoly - 1)
@@ -589,32 +601,17 @@ def reconstruct(hp, SlVD, SrVD, sgpolygen, myGUI):
         SlVD.cwSuccessor.append(SrVD.cwSuccessor[i] + SlVDedge)
         SlVD.ccwSuccessor.append(SrVD.ccwSuccessor[i] + SlVDedge)
 
+    SlVD.xVertex.append(hp[0][0][0])
+    SlVD.yVertex.append(hp[0][0][1])
+    SlVD.wVertex.append(0)
+    SlVD.xVertex.append(hp[hpsize - 1][1][0])
+    SlVD.yVertex.append(hp[hpsize - 1][1][1])
+    SlVD.wVertex.append(0)
     for i in range(hpsize):
         leftindex = findpolygonindex(sgpolygen[i][0], SlVD)
         rightindex = findpolygonindex(sgpolygen[i][1], SlVD)
         SlVD.leftPloygon.append(leftindex)
         SlVD.rightPloygon.append(rightindex)
-
-        if i == 0:
-            SlVD.xVertex.append(hp[i][0][0])
-            SlVD.yVertex.append(hp[i][0][1])
-            SlVD.wVertex.append(0)
-
-            SlVD.xVertex.append(hp[i][1][0])
-            SlVD.yVertex.append(hp[i][1][1])
-            if hpsize == 1:
-                SlVD.wVertex.append(0)
-            else:
-                SlVD.wVertex.append(1)
-        elif i == hpsize - 1:
-            SlVD.xVertex.append(hp[i][1][0])
-            SlVD.yVertex.append(hp[i][1][1])
-            SlVD.wVertex.append(0)
-
-        else:
-            SlVD.xVertex.append(hp[i][1][0])
-            SlVD.yVertex.append(hp[i][1][1])
-            SlVD.wVertex.append(1)
 
         SlVD.startVertex.append(findvertexindex(hp[i][0], SlVD))
         SlVD.endVertex.append(findvertexindex(hp[i][1], SlVD))
@@ -691,6 +688,70 @@ def printhp(hp, myGUI):
     myGUI.printedges(edges, 'red', 'hp')
 
 
+def isSquare(Sl, Sr):
+    def cross_product(p1, p2):
+        result = p1[0] * p2[1] - p2[0] * p1[1]
+        if abs(result) < 0.01:
+            result = 0
+        return result
+
+    def hasintersection(a1, a2, b1, b2):
+        a = [a2[0] - a1[0], a2[1] - a1[1]]
+        b = [b2[0] - b1[0], b2[1] - b1[1]]
+        s = [b1[0] - a1[0], b1[1] - a1[1]]
+        c1 = cross_product(a, b)
+        c2 = cross_product(s, b)
+        if c1 == 0:
+            if c2 == 0:
+                return False #兩線重疊
+            else:
+                return True #兩線平行但不重疊
+        else:
+            return False
+
+    r1 = hasintersection(Sl[0], Sl[1], Sr[0], Sr[1])
+    r2 = hasintersection(Sl[0], Sr[0], Sl[1], Sr[1])
+    r3 = r1 and r2
+    return r3
+
+
+def unionhp_square(hp, sgBS, Sl, Sr):
+    pass
+
+
+def PbetweenPZ(p1, p2, p3):
+    return collinear(p1, p2, p3) and insidetheline(p1, p2, p3)
+
+
+def getdistance(p1, p2):
+    return math.sqrt(((p1[0]-p2[0])**2)+((p1[1]-p2[1])**2))
+
+
+def equals(P1, P2):
+    return abs(P1[0]-P2[0]) < 0.1 and abs(P1[1]-P2[1]) < 0.1
+
+
+def findmaxinteraction(sgpoint, sgBS, VD):
+    # sgpoint 是VD中polygon 的其中一點 可能的Z就是VD polygon 除了sgpoint的所有點
+    maxinteraction = sgBS[1]
+    maxz = None
+    for i in range(VD.getPolysize()):
+        Z = [VD.xPolygon[i], VD.yPolygon[i]]
+        if Z == sgpoint:
+            continue
+        #檢查是否有焦點
+        BS = getBS([sgpoint, Z])
+        R = intersection(line(sgBS[0], sgBS[1]), line(BS[0], BS[1]))
+        # 兩線平行，交點不存在。
+        # 兩線重疊，交點無限多。
+        if R != [-1, -1]:
+            # 有焦點但是通過之前有通過的點 也就是 sgBS[0] 不行
+            if not equals(R, sgBS[0]) and getdistance(sgBS[0], maxinteraction) > getdistance(sgBS[0], R):
+                maxinteraction = R
+                maxz = Z
+    return maxinteraction, maxz
+
+
 def merageVD(Sl, Sr, SlVD, SrVD, myGUI):
     # Input: list, list, VD, VD
     # Output: VD
@@ -710,42 +771,20 @@ def merageVD(Sl, Sr, SlVD, SrVD, myGUI):
     sg = [SlHightangent, SrHightangent]
     sgpolygen = []
     hp = []
-    # sl走訪順序
-    front = hightangentindex[0]
-    rear = lowtangentindex[0]
-    Slseq = [SlHull[hightangentindex[0]]]
-    if len(SlHull) > 1:
-        while True:
-            front = (front - 1) % len(SlHull)
-            Slseq.append(SlHull[front])
-            if front == rear:
-                break
-    # sr走訪順序
-    front = hightangentindex[1]
-    rear = lowtangentindex[1]
-    Srseq = [SrHull[hightangentindex[1]]]
-    if len(SrHull) > 1:
-        while True:
-            front = (front + 1) % len(SrHull)
-            Srseq.append(SrHull[front])
-            if front == rear:
-                break
-    Slpointer = 0
-    Srpointer = 0
+    premaxintersection = [801, 801]
+    preZ = [0, 0]
     while 1:
-        Slnextindex = None
-        Srnextindex = None
         sgpolygen.append(sg)
-        lR = [-1, -1]
-        rR = [-1, -1]
         sgBS = getBS(sg)
         pointlen = len(Sl) + len(Sr)
         if pointlen == 2:
-            hp = unionhp(sg, hp, sgBS)
+            hp = unionhp(hp, sgBS)
         elif pointlen == 3:
             hp = unionhp_Tri(sg, hp, sgBS, Sl, Sr)
+        elif pointlen == 4 and isSquare(Sl, Sr):
+            hp = unionhp_square(hp, sgBS, Sl, Sr)
         else:
-            hp = unionhp(sg, hp, sgBS)
+            hp = unionhp(hp, sgBS)
 
         printhp(hp, myGUI)
         if myGUI.stepFlag:
@@ -753,44 +792,29 @@ def merageVD(Sl, Sr, SlVD, SrVD, myGUI):
         if sg == lowtangent:
             break
 
+        sgBS = hp[len(hp) - 1]
         # step 4
         # Z是下一個可能的convex hull point
-        # 1:1
-
-        # if SlZindex != lowtangentindex[0]:
-        #     Slnextindex = (SlZindex - 1) % len(SlHull)
-        # if SrZindex != lowtangentindex[1]:
-        #     Srnextindex = (SrZindex + 1) % len(SrHull)
-
-        if Slpointer + 1 < len(Slseq):
-            Slnextindex = Slpointer + 1
-        if Srpointer + 1 < len(Srseq):
-            Srnextindex = Srpointer + 1
-        if Srnextindex is not None:
-            newBS = getBS([sg[1], Srseq[Srnextindex]])
-            rR = intersection(line(sgBS[0], sgBS[1]), line(newBS[0], newBS[1]))
-            if abs(rR[0] - hp[len(hp) - 1][0][0]) < 0.01 and abs(rR[1] - hp[len(hp) - 1][0][1]) < 0.01:
-                rR = [-1, -1]
-        if Slnextindex is not None:
-            newBS = getBS([sg[0], Slseq[Slnextindex]])
-            lR = intersection(line(sgBS[0], sgBS[1]), line(newBS[0], newBS[1]))
-            if abs(lR[0] - hp[len(hp) - 1][0][0]) < 0.01 and abs(lR[1] - hp[len(hp) - 1][0][1]) < 0.01:
-                lR = [-1, -1]
-
-        # 只有一個焦點
-        if lR == [-1, -1] and rR != lR:
-            sg = [sg[0], Srseq[Srnextindex]]
-            Srpointer += 1
-        elif rR == [-1, -1] and lR != rR:
-            sg = [Slseq[Slnextindex], sg[1]]
-            Slpointer += 1
+        # 任何點都可能
+        # 找出VD 與該BS 最先接觸的點
+        lmaxintersection, lZ = findmaxinteraction(sg[0], sgBS, SlVD)
+        rmaxintersection, rZ = findmaxinteraction(sg[1], sgBS, SrVD)
+        if lZ == rZ is None:
+            # 都沒有交點 所以HP保持原樣
+            break
+        elif lZ is None:
+            sg = [sg[0], rZ]
+        elif rZ is None:
+            sg = [lZ, sg[1]]
+        elif lmaxintersection[1] - rmaxintersection[1] > 0.1:
+            # 左邊交點PxPz先碰到， 所以sg = [Pz, Py]
+            sg = [lZ, sg[1]]
+        elif rmaxintersection[1] - lmaxintersection[1] > 0.1:
+            # 右邊交點PxPy先碰到， 所以sg = [Px, Pz]
+            sg = [sg[0], rZ]
         else:
-            if lR[1] < rR[1]:
-                sg = [sg[0], Srseq[Srnextindex]]
-                Srpointer += 1
-            else:
-                sg = [Slseq[Slnextindex], sg[1]]
-                Slpointer += 1
+            # 兩邊焦點 一致 所以PxPz與PxPy之間不會有線，因此跳過 直接各往下
+            sg = [lZ, rZ]
     # step 5
     resultVD = reconstruct(hp, SlVD, SrVD, sgpolygen, myGUI)
     return resultVD
@@ -806,7 +830,7 @@ def printVD(pointlist, VD, color, myGUI):
         edges.append([(startX, startY), (endX, endY)])
 
     edges = sorted(edges, key=lambda edge: [edge[0][0], edge[0][1], edge[1][0], edge[1][1]])
-    myGUI.printedges(edges, 'black', 'edge')
+    myGUI.printedges(edges, 'green', 'edge')
     myGUI.printpoint(pointlist, color)
 
 
@@ -820,6 +844,7 @@ def getVolonoi(inputPoints, myGUI):
     global Btn
     Sl = []
     Sr = []
+    medianlist = []
     if len(inputPoints) == 1:
         return Vp(inputPoints)
     median = np.median(inputPoints, axis=0)
@@ -829,10 +854,17 @@ def getVolonoi(inputPoints, myGUI):
             if point[0] < median[0]:
                 Sl.append(point)
             else:
-                if point[1] >= median[1]:
-                    Sl.append(point)
-                else:
-                    Sr.append(point)
+                medianlist.append(point)
+                # if point[1] >= median[1]:
+                #     Sl.append(point)
+                # else:
+                #     Sr.append(point)
+        else:
+            Sr.append(point)
+    median = np.median(medianlist, axis=0)
+    for point in medianlist:
+        if point[1] >= median[1]:
+            Sl.append(point)
         else:
             Sr.append(point)
     SlVD = getVolonoi(Sl, myGUI)
@@ -844,7 +876,10 @@ def getVolonoi(inputPoints, myGUI):
     if myGUI.stepFlag:
         myGUI.guiwait()
     ResultVD = merageVD(Sl, Sr, SlVD, SrVD, myGUI)
-
+    myGUI.canvas.delete('edge')
+    printVD(inputPoints, ResultVD, 'green', myGUI)
+    if myGUI.stepFlag:
+        myGUI.guiwait()
     return ResultVD
 
 
