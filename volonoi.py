@@ -6,7 +6,7 @@ import math
 
 import numpy as np
 
-screensize = 1000
+screensize = 3000
 
 # Constant integers for directions
 RIGHT = 1
@@ -139,7 +139,7 @@ def getHull(VD):
     polygonfront = None
     convexhull = []
     polysize = VD.getPolysize()
-    if polysize <= 3:
+    if polysize < 3:
         if polysize == 0:
             convexhull.append([VD.xPolygon[0], VD.yPolygon[0]])
         else:
@@ -171,6 +171,32 @@ def getHull(VD):
         if polygonfront == startploygon:
             break
 
+    return convexhull
+
+
+def graham_scan(pointlist):
+    def cross_product(a, b, c):
+        return (b[1] - a[1]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[1] - a[1])
+
+    def sort_points(point_array):
+        def slope(y):
+            x = point_array[0]
+            if x[0] == y[0]:
+                return 999999
+            else:
+                return (x[1] - y[1]) / (x[0] - y[0])
+
+        point_array = point_array[:1] + sorted(point_array[1:], key=slope)
+        return point_array
+
+    convexhull = []
+    sortpoint = sort_points(pointlist)
+    for p in sortpoint:
+        # if we turn clockwise to reach this point, pop the last point from the stack, else, append this point to it.
+        while len(convexhull) > 1 and cross_product(convexhull[-2], convexhull[-1], p) >= 0:
+            convexhull.pop()
+        convexhull.append(p)
+    # the stack is now a representation of the convex hull, return it.
     return convexhull
 
 
@@ -247,19 +273,21 @@ def getTangent(SlHull, SrHull):
 
     lpointer_1 = l
     rpointer_1 = r
-    while left(SlHull[lpointer_1], SrHull[rpointer_1], SrHull[(rpointer_1 + 1) % len(SrHull)]) or left(SlHull[lpointer_1], SrHull[rpointer_1], SlHull[(lpointer_1 - 1) % len(SlHull)]):
+    while left(SlHull[lpointer_1], SrHull[rpointer_1], SrHull[(rpointer_1 + 1) % len(SrHull)]) or \
+            right(SrHull[rpointer_1], SlHull[lpointer_1], SlHull[(lpointer_1 - 1) % len(SlHull)]):
         while left(SlHull[lpointer_1], SrHull[rpointer_1], SrHull[(rpointer_1 + 1) % len(SrHull)]):
             rpointer_1 = (rpointer_1 + 1) % len(SrHull)
         # move p as long as it makes right turn
-        while left(SlHull[lpointer_1], SrHull[rpointer_1], SlHull[(lpointer_1 - 1) % len(SlHull)]):
+        while right(SrHull[rpointer_1], SlHull[lpointer_1], SlHull[(lpointer_1 - 1) % len(SlHull)]):
             lpointer_1 = (lpointer_1 - 1) % len(SlHull)
     lpointer_2 = l
     rpointer_2 = r
-    while right(SlHull[lpointer_2], SrHull[rpointer_2], SrHull[(rpointer_2 - 1) % len(SrHull)]) or right(SlHull[lpointer_2], SrHull[rpointer_2], SlHull[(lpointer_2 + 1) % len(SlHull)]):
+    while right(SlHull[lpointer_2], SrHull[rpointer_2], SrHull[(rpointer_2 - 1) % len(SrHull)]) or \
+            left(SrHull[rpointer_2], SlHull[lpointer_2], SlHull[(lpointer_2 + 1) % len(SlHull)]):
         while right(SlHull[lpointer_2], SrHull[rpointer_2], SrHull[(rpointer_2 - 1) % len(SrHull)]):
             rpointer_2 = (rpointer_2 - 1) % len(SrHull)
         # move p as long as it makes right turn
-        while right(SlHull[lpointer_2], SrHull[rpointer_2], SlHull[(lpointer_2 + 1) % len(SlHull)]):
+        while left(SrHull[rpointer_2], SlHull[lpointer_2], SlHull[(lpointer_2 + 1) % len(SlHull)]):
             lpointer_2 = (lpointer_2 + 1) % len(SlHull)
 
     Lowtengent = [SlHull[lpointer_1], SrHull[rpointer_1]]
@@ -279,20 +307,20 @@ def getBS(sg):
     # BS 垂直
     if BSvector[0] == 0:
         BS[0] = [mid[0], screensize]
-        BS[1] = [mid[0], 0]
+        BS[1] = [mid[0], -screensize]
     # BS 平行
     elif BSvector[1] == 0:
         BS[0] = [screensize, mid[1]]
-        BS[1] = [0, mid[1]]
+        BS[1] = [-screensize, mid[1]]
     else:
-        m1 = (0 - mid[1]) / BSvector[1]
+        m1 = (-screensize - mid[1]) / BSvector[1]
         m2 = (screensize - mid[1]) / BSvector[1]
         # BS[0][0] = mid[0] + m1 * BSvector[0]
         # BS[0][1] = 0
         BS[0][0] = mid[0] + m2 * BSvector[0]
         BS[0][1] = screensize
         BS[1][0] = mid[0] + m1 * BSvector[0]
-        BS[1][1] = 0
+        BS[1][1] = -screensize
 
     return BS
 
@@ -401,6 +429,9 @@ def unionhp(hp, sgBS):
     # Input list[line], line = [[x1, y1], [x2, y2]] 
     # output list[line]
     # 2point
+    def outsidecanvas(R):
+        return (R[0] < 0 or R[0] > 600) and (R[1] < 0 or R[1] > 600)
+
     if not hp:
         hp.append(sgBS)
     else:
@@ -409,9 +440,12 @@ def unionhp(hp, sgBS):
         L1 = line(hp[lastpointindex][0], hp[lastpointindex][1])
         L2 = line(sgBS[0], sgBS[1])
         R = intersection(L1, L2)
-
-        hp[lastpointindex][1] = [R[0], R[1]]
-        hp.append([[R[0], R[1]], sgBS[1]])
+        if outsidecanvas(R):
+            hp.pop(lastpointindex)
+            hp.append([[R[0], R[1]], sgBS[1]])
+        else:
+            hp[lastpointindex][1] = [R[0], R[1]]
+            hp.append([[R[0], R[1]], sgBS[1]])
 
     return hp
 
@@ -443,7 +477,8 @@ def insidetheline(startpoint, endpoint, param):
         if startpoint[0] - param[0] > 0.001:
             return False
         else:
-            if min(startpoint[1], endpoint[1]) <= param[1] <= max(startpoint[1], endpoint[1]):
+            if not (min(startpoint[1], endpoint[1]) - param[1] > 0.1) and not (
+                    param[1] - max(startpoint[1], endpoint[1]) > 0.1):
                 return True
             else:
                 return False
@@ -501,11 +536,11 @@ def discardVD(hp, VD, myGUI, VDdirection):
                 startdirection = directionOfPoint([hpset[hppoint - 1][0], hpset[hppoint - 1][1]],
                                                   [hpset[hppoint][0], hpset[hppoint][1]],
                                                   startpoint)
-                enddirection = directionOfPoint([hpset[hppoint - 1][0], hpset[hppoint - 1][1]],
-                                                [hpset[hppoint][0], hpset[hppoint][1]],
+                enddirection = directionOfPoint([hpset[hppoint][0], hpset[hppoint][1]],
+                                                [hpset[hppoint + 1][0], hpset[hppoint + 1][1]],
                                                 endpoint)
-                hpdirection = directionOfPoint([hpset[hppoint - 1][0], hpset[hppoint - 1][1]],
-                                               [hpset[hppoint][0], hpset[hppoint][1]],
+                hpdirection = directionOfPoint([hpset[hppoint][0], hpset[hppoint][1]],
+                                               [hpset[hppoint + 1][0], hpset[hppoint + 1][1]],
                                                [hpset[hppoint + 1][0], hpset[hppoint + 1][1]])
                 if insidetheline(startpoint, endpoint, hpset[hppoint]) and collinear(startpoint, endpoint,
                                                                                      hpset[hppoint]):
@@ -542,10 +577,11 @@ def discardVD(hp, VD, myGUI, VDdirection):
                             VD.ccwPredecessor[i] = 0
                             VD.cwPredecessor[i] = 0
                     else:
-                        VD.endVertex[i] = hppointindex
-                        VD.startVertex.append(hppointindex)
-                        VD.endVertex.append(end)
-                        break
+                        if startdirection == VDdirection:
+                            VD.endVertex[i] = hppointindex
+                        elif enddirection == VDdirection:
+                            VD.startVertex[i] = hppointindex
+
                     start = VD.startVertex[i]
                     end = VD.endVertex[i]
                     myGUI.printedges([[[VD.xVertex[start], VD.yVertex[start]], [VD.xVertex[end], VD.yVertex[end]]]],
@@ -553,11 +589,9 @@ def discardVD(hp, VD, myGUI, VDdirection):
                                      'discardresult')
                     if myGUI.stepFlag:
                         myGUI.guiwait()
-                elif startdirection == enddirection != VDdirection:
-                    deleteedgeindex.add(i)
 
-    for deleteindex in deleteedgeindex:
-        VD.deleteEdge(deleteindex)
+    # for deleteindex in sorted(deleteedgeindex, reverse=True):
+    #     VD.deleteEdge(deleteindex)
     return VD
 
 
@@ -589,8 +623,8 @@ def reconstruct(hp, SlVD, SrVD, sgpolygen, myGUI):
         SlVD.xPolygon.append(SrVD.xPolygon[i])
         SlVD.yPolygon.append(SrVD.yPolygon[i])
     for i in range(SrVDedge):
-        SlVD.rightPloygon.append(SrVD.rightPloygon[i] + SlVDpoly - 1)
-        SlVD.leftPloygon.append(SrVD.leftPloygon[i] + SlVDpoly - 1)
+        SlVD.rightPloygon.append(SrVD.rightPloygon[i] + SlVDpoly)
+        SlVD.leftPloygon.append(SrVD.leftPloygon[i] + SlVDpoly)
 
         SlVD.startVertex.append(SrVD.startVertex[i] + SlVDver)
         SlVD.endVertex.append(SrVD.endVertex[i] + SlVDver)
@@ -676,6 +710,23 @@ def reconstruct(hp, SlVD, SrVD, sgpolygen, myGUI):
                     SlVD.ccwSuccessor[i] = point[0]
                 elif direction == LEFT:
                     SlVD.cwSuccessor[i] = point[0]
+
+    # 刪除孤兒邊 指的是vertex沒有連到其他邊
+    if SlVD.getPolysize() > 4:
+        reversed_range = range(SlVD.getedgesize() - 1, 0, -1)
+        for i in reversed_range:
+            hasfriend = False
+            start = SlVD.startVertex[i]
+            end = SlVD.endVertex[i]
+            for j in range(SlVD.getedgesize() - 1, 0, -1):
+                if SlVD.startVertex[j] == start and SlVD.endVertex[j] == end:
+                    hasfriend = False
+                elif SlVD.startVertex[j] == start or SlVD.startVertex[j] == end or SlVD.endVertex[j] == end or \
+                        SlVD.endVertex[j] == start:
+                    hasfriend = True
+                    break
+            if hasfriend == False:
+                SlVD.deleteEdge(i)
     return SlVD
 
 
@@ -703,9 +754,9 @@ def isSquare(Sl, Sr):
         c2 = cross_product(s, b)
         if c1 == 0:
             if c2 == 0:
-                return False #兩線重疊
+                return False  # 兩線重疊
             else:
-                return True #兩線平行但不重疊
+                return True  # 兩線平行但不重疊
         else:
             return False
 
@@ -715,8 +766,16 @@ def isSquare(Sl, Sr):
     return r3
 
 
-def unionhp_square(hp, sgBS, Sl, Sr):
-    pass
+def unionhp_square(hp, sgBS, Slpoint, Srpoint):
+    if not hp:
+        hp.append(sgBS)
+        return hp
+    else:
+        R = np.mean(Slpoint + Srpoint, axis=0)
+        tmp = hp[0][1]
+        hp[0][1] = [R[0], R[1]]
+        hp.append([[R[0], R[1]], [tmp[0], tmp[1]]])
+        return hp
 
 
 def PbetweenPZ(p1, p2, p3):
@@ -724,11 +783,11 @@ def PbetweenPZ(p1, p2, p3):
 
 
 def getdistance(p1, p2):
-    return math.sqrt(((p1[0]-p2[0])**2)+((p1[1]-p2[1])**2))
+    return math.sqrt(((p1[0] - p2[0]) ** 2) + ((p1[1] - p2[1]) ** 2))
 
 
 def equals(P1, P2):
-    return abs(P1[0]-P2[0]) < 0.1 and abs(P1[1]-P2[1]) < 0.1
+    return abs(P1[0] - P2[0]) < 0.1 and abs(P1[1] - P2[1]) < 0.1
 
 
 def findmaxinteraction(sgpoint, sgBS, VD):
@@ -739,9 +798,11 @@ def findmaxinteraction(sgpoint, sgBS, VD):
         Z = [VD.xPolygon[i], VD.yPolygon[i]]
         if Z == sgpoint:
             continue
-        #檢查是否有焦點
+        # 檢查是否有焦點
         BS = getBS([sgpoint, Z])
         R = intersection(line(sgBS[0], sgBS[1]), line(BS[0], BS[1]))
+        if not insidetheline(sgBS[0], sgBS[1], R):
+            R = [-1, -1]
         # 兩線平行，交點不存在。
         # 兩線重疊，交點無限多。
         if R != [-1, -1]:
@@ -757,8 +818,8 @@ def merageVD(Sl, Sr, SlVD, SrVD, myGUI):
     # Output: VD
     # step 1:
     # 回傳座標值
-    SlHull = getHull(SlVD)
-    SrHull = getHull(SrVD)
+    SlHull = graham_scan(Sl)
+    SrHull = graham_scan(Sr)
     # step 2
     hightangent, lowtangent = getTangent(SlHull, SrHull)
     # step 3
