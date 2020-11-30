@@ -74,13 +74,6 @@ class Vp:
         return False
 
     def deleteEdge(self, index):
-        # # wVertex: 1 if vertex is ordinary point, 0 if vertex at infinity
-        # self.xVertex.pop(self.startVertex[index])
-        # self.yVertex.pop(self.startVertex[index])
-        # self.wVertex.pop(self.startVertex[index])
-        # self.xVertex.pop(self.endVertex[index])
-        # self.yVertex.pop(self.endVertex[index])
-        # self.wVertex.pop(self.endVertex[index])
         # Edge: 3*inPoint - 3
         self.rightPloygon.pop(index)
         self.leftPloygon.pop(index)
@@ -315,8 +308,6 @@ def getBS(sg):
     else:
         m1 = (-screensize - mid[1]) / BSvector[1]
         m2 = (screensize - mid[1]) / BSvector[1]
-        # BS[0][0] = mid[0] + m1 * BSvector[0]
-        # BS[0][1] = 0
         BS[0][0] = mid[0] + m2 * BSvector[0]
         BS[0][1] = screensize
         BS[1][0] = mid[0] + m1 * BSvector[0]
@@ -440,12 +431,16 @@ def unionhp(hp, sgBS):
         L1 = line(hp[lastpointindex][0], hp[lastpointindex][1])
         L2 = line(sgBS[0], sgBS[1])
         R = intersection(L1, L2)
-        if outsidecanvas(R):
-            hp.pop(lastpointindex)
-            hp.append([[R[0], R[1]], sgBS[1]])
-        else:
-            hp[lastpointindex][1] = [R[0], R[1]]
-            hp.append([[R[0], R[1]], sgBS[1]])
+        if hp[lastpointindex][1] == sgBS[0]:
+            R = sgBS[0]
+        hp[lastpointindex][1] = [R[0], R[1]]
+        hp.append([[R[0], R[1]], sgBS[1]])
+        # if outsidecanvas(R):
+        #     hp.pop(lastpointindex)
+        #     hp.append([[R[0], R[1]], sgBS[1]])
+        # else:
+        #     hp[lastpointindex][1] = [R[0], R[1]]
+        #     hp.append([[R[0], R[1]], sgBS[1]])
 
     return hp
 
@@ -518,7 +513,6 @@ def findpolygonindex(poly, SlVD):
 def discardVD(hp, VD, myGUI, VDdirection):
     hpsize = len(hp)
     hpset = [hp[0][0]]
-    deleteedgeindex = set()
     for i in range(hpsize):
         hpset.append(hp[i][1])
 
@@ -590,8 +584,6 @@ def discardVD(hp, VD, myGUI, VDdirection):
                     if myGUI.stepFlag:
                         myGUI.guiwait()
 
-    # for deleteindex in sorted(deleteedgeindex, reverse=True):
-    #     VD.deleteEdge(deleteindex)
     return VD
 
 
@@ -727,6 +719,38 @@ def reconstruct(hp, SlVD, SrVD, sgpolygen, myGUI):
                     break
             if hasfriend == False:
                 SlVD.deleteEdge(i)
+    # if SlVD.getPolysize() > 4:
+    #     reversed_range = range(SlVD.getedgesize() - 1, 0, -1)
+    #     for i in reversed_range:
+    #         starthasfriend = False
+    #         endhasfriend = False
+    #         start = SlVD.startVertex[i]
+    #         end = SlVD.endVertex[i]
+    #         for j in range(SlVD.getedgesize() - 1, 0, -1):
+    #             if SlVD.startVertex[j] == start and SlVD.endVertex[j] == end:
+    #                 continue
+    #             else:
+    #                 if SlVD.startVertex[j] == start or SlVD.endVertex[j] == start:
+    #                     starthasfriend = True
+    #                 if SlVD.startVertex[j] == end or SlVD.endVertex[j] == end:
+    #                     endhasfriend = True
+    #
+    #         if starthasfriend and endhasfriend:
+    #             hasfriend = True
+    #         elif starthasfriend:
+    #             if SlVD.wVertex[start]==0:
+    #                 hasfriend = False
+    #             else:
+    #                 hasfriend = True
+    #         elif endhasfriend:
+    #             if SlVD.wVertex[end]==0:
+    #                 hasfriend = False
+    #             else:
+    #                 hasfriend = True
+    #         else:
+    #             hasfriend = False
+    #         if hasfriend == False:
+    #             SlVD.deleteEdge(i)
     return SlVD
 
 
@@ -740,6 +764,22 @@ def printhp(hp, myGUI):
 
 
 def isSquare(Sl, Sr):
+    def getAngle(P1, P2, P3):
+        a = np.array(P1)
+        b = np.array(P2)
+        c = np.array(P3)
+
+        ba = a - b
+        bc = c - b
+
+        cosine_angle = np.dot(ba, bc) / (np.linalg.norm(ba) * np.linalg.norm(bc))
+        angle = np.arccos(cosine_angle)
+
+        result = np.degrees(angle)
+        print(result)
+        return result
+        # ang = math.degrees(math.atan2(c[1] - b[1], c[0] - b[0]) - math.atan2(a[1] - b[1], a[0] - b[0]))
+        # return ang + 360 if ang < 0 else ang
     def cross_product(p1, p2):
         result = p1[0] * p2[1] - p2[0] * p1[1]
         if abs(result) < 0.01:
@@ -762,7 +802,7 @@ def isSquare(Sl, Sr):
 
     r1 = hasintersection(Sl[0], Sl[1], Sr[0], Sr[1])
     r2 = hasintersection(Sl[0], Sr[0], Sl[1], Sr[1])
-    r3 = r1 and r2
+    r3 = r1 and r2 and (getAngle(Sl[0], Sl[1], Sr[1]) == 90 or getAngle(Sl[0], Sl[1], Sr[0]) == 90)
     return r3
 
 
@@ -827,16 +867,22 @@ def merageVD(Sl, Sr, SlVD, SrVD, myGUI):
     SrHightangent = hightangent[1]
     SlLowtangent = lowtangent[0]
     Srlowtangent = lowtangent[1]
-    hightangentindex = [SlHull.index(SlHightangent), SrHull.index(SrHightangent)]
-    lowtangentindex = [SlHull.index(SlLowtangent), SrHull.index(Srlowtangent)]
     sg = [SlHightangent, SrHightangent]
+    presg = [None, None]
     sgpolygen = []
+    sgflag = False
     hp = []
-    premaxintersection = [801, 801]
-    preZ = [0, 0]
     while 1:
         sgpolygen.append(sg)
         sgBS = getBS(sg)
+        if sgflag == True:
+            sgflag = False
+            BS_1 = getBS([sg[0], presg[0]])
+            BS_2 = getBS([sg[1], presg[1]])
+            R = intersection(line(BS_1[0], BS_1[1]), line(BS_2[0], BS_2[1]))
+            hp[len(hp)-1][1] = R
+            sgBS[0] = R
+
         pointlen = len(Sl) + len(Sr)
         if pointlen == 2:
             hp = unionhp(hp, sgBS)
@@ -875,6 +921,10 @@ def merageVD(Sl, Sr, SlVD, SrVD, myGUI):
             sg = [sg[0], rZ]
         else:
             # 兩邊焦點 一致 所以PxPz與PxPy之間不會有線，因此跳過 直接各往下
+            if not isSquare(Sl, Sr):
+                presg[0] = sg[0]
+                presg[1] = sg[1]
+                sgflag = True
             sg = [lZ, rZ]
     # step 5
     resultVD = reconstruct(hp, SlVD, SrVD, sgpolygen, myGUI)
@@ -972,4 +1022,3 @@ def volonoialgorithm(pointlist, myGUI):
         print("E: (" + str(edges[i][0][0]) + ", " + str(edges[i][0][1]) + "), (" + str(edges[i][1][0]) + ", " + str(
             edges[i][1][1]) + ")")
     return pointlist, edges
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
